@@ -1,5 +1,6 @@
-
 import math
+
+from solucion_rsa_core import generate_p_q, miller_rabin_probable_prime, modinv as _modinv
 
 
 def egcd(a, b):
@@ -26,49 +27,55 @@ def modinv(e, phi):
     return x % phi  # Garantiza que el resultado sea positivo
 
 
-def generar_llaves(p, q, e):
+def generar_llaves(bits_primo=128, rounds=20, e=65537):
+    p, q = generate_p_q(bits_primo, rounds=rounds)
     n = p * q
     phi = (p - 1) * (q - 1)
 
     assert 1 < e < phi, "e debe estar entre 1 y phi"
     assert math.gcd(e, phi) == 1, "e y phi deben ser coprimos"
 
-    d = modinv(e, phi)
-    return n, phi, d
+    d = _modinv(e, phi)
+    return n, phi, e, d
 
 
-def firmar(H, e, n):
-    return pow(H, e, n)
+def firmar(H, d, n):
+    return pow(H, d, n)
 
 
-def decifrar(C, d, n):
-    return pow(C, d, n)
+def decifrar(C, e, n):
+    return pow(C, e, n)
 
 
-def verificar(H, S, d, n):
-    H_decrypted = decifrar(S, d, n)
+def verificar(H, S, e, n):
+    H_decrypted = decifrar(S, e, n)
     return H == H_decrypted
 
 
 def main():
-    p = 61
-    q = 53
-    e = 17
+    # Parte 4: Generar claves con Miller-Rabin
+    bits_primo = 128
+    rounds = 20
+    e_pub = 65537
 
-    n, phi, d = generar_llaves(p, q, e)
+    n, phi, e, d = generar_llaves(bits_primo=bits_primo, rounds=rounds, e=e_pub)
 
-    print(f"n   = {n}")
-    print(f"e   = {e}")
-    print(f"d   = {d}")
-    print(f"phi = {phi}")
-    print(f"Verificación: (e × d) % phi = {(e * d) % phi}")
+    print(f"n bits = {n.bit_length()}")
+    print(f"n (hex prefijo) = {hex(n)[:26]}...")
+    print(f"Checkpoint: (e * d) % phi = {(e * d) % phi}")
 
-    H = 123  # H es el hash del mensaje que queremos encriptar
-    S = firmar(H, e, n)
+    compuesto = 3 * 999999999999999999
+    print(f"miller_rabin_probable_prime({compuesto}) = {miller_rabin_probable_prime(compuesto, rounds=rounds)}")
 
-    print(f"Hash H = {H}")
-    print(f"Texto encriptado S = {S}")
-    print(f"Verificación: {verificar(H, S, d, n)}")
+    # Parte 3: Firma y verificacion sobre enteros H
+    H = 123
+    S = firmar(H, d, n)
+
+    print(f"\nHash H = {H}")
+    print(f"Firma S = {S}")
+    print(f"Verificacion: {verificar(H, S, e, n)}")
+
+
 
 
 if __name__ == "__main__":
